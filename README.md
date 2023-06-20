@@ -11,3 +11,8 @@ The execution time of the algorithm was also constrained in order for it to not 
 
 ## Algorithm
 An explanation of the algorithm used inside the plugin for finding a combination of HVT and LVT cells to better reduce the leakage power consumption can be found inside the .pdf inside the repository.
+
+## Authors 
+- [Matteo Isoldi](https://github.com/bOhYee)
+- [Filippo Marostica](https://github.com/filippomarostica)
+- [Elena Roncolino](https://github.com/elenaroncolino)
