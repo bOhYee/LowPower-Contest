@@ -9,6 +9,11 @@ The goal of the project was to minimize the leakage power consumption by trying 
 
 The execution time of the algorithm was also constrained in order for it to not take too much time in finding a solution to the problem.
 
+## Expected parameters
+Two arguments are expected by the program:
+- **slackThreshold**: endpoints with a slack lower than this value are defined as **violating endpoints** (value ranging from 0 to 0.1ns);
+- **maxFanoutEndpointCost**: the maximum fanout endpoint cost for each cell in the circuit.
+
 ## Algorithm
 An explanation of the algorithm used inside the plugin for finding a combination of HVT and LVT cells to better reduce the leakage power consumption can be found inside the .pdf inside the repository.
 

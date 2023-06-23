@@ -72,8 +72,6 @@ proc check_contest_constraints {slackThreshold maxFanoutEndpointCost} {
         }
         
         if {$cell_fanout_endpoint_cost >= $maxFanoutEndpointCost} {
-            set cell_name [get_attribute $cell full_name]
-            set cell_ref_name [get_attribute $cell ref_name]
             return 0
         }
     }
@@ -83,7 +81,6 @@ proc check_contest_constraints {slackThreshold maxFanoutEndpointCost} {
 
 proc compute_fanout_cost {cell slackThreshold} {
 
-    set cells ""
     set totalCells 0
     set cell_fanout_endpoint_cost 0.0
     set paths [get_timing_paths -through $cell -nworst 1 -max_paths 10000 -slack_lesser_than $slackThreshold]
@@ -96,23 +93,17 @@ proc compute_fanout_cost {cell slackThreshold} {
 
             # Recover pin informations
             set pin [get_attribute $point object]
-            set name_pin [get_attribute $pin full_name]
 
             # Need to verify that is an output pin (in order to not have duplicates)
-            if { [regexp "(U.*/Z)" $name_pin] == 0 } {
+            if { [regexp "(U.*/Z)" [get_attribute $pin full_name]] == 0 } {
                 continue;
             }
-
-            # Recover associated cell informations
-            set cell [get_attribute $pin cell]
-            set full_name [get_attribute $cell full_name]
-            lappend cells $full_name
 
             incr totalCells
         }
     }
 
-    return "$cell_fanout_endpoint_cost $totalCells $cells"
+    return "$cell_fanout_endpoint_cost $totalCells"
 }
 
 proc extractCellsInfo {slackThreshold} {
@@ -131,7 +122,6 @@ proc extractCellsInfo {slackThreshold} {
     #   7 - List
     #   7.1 - Fanout endpoint cost
     #   7.2 - Number of cells of worst critical path for fanout endpoint cost
-    #   7.3 - Violating cells
 
     # Recover LVT related informations
     swap_to_lvt
@@ -149,10 +139,9 @@ proc extractCellsInfo {slackThreshold} {
     swap_to_hvt
     foreach cellInfo $tempList {
         set cell [get_cells [lindex $cellInfo 0]]
-        set worstPathForCell [get_timing_paths -through $cell]
 
         lappend cellInfo [get_attribute $cell leakage_power]
-        lappend cellInfo [get_attribute $worstPathForCell slack]
+        lappend cellInfo [get_attribute [get_timing_paths -through $cell] slack]
         lappend cellInfo [expr [lindex $cellInfo 1] - [lindex $cellInfo 3]]
         lappend cellInfo [expr [lindex $cellInfo 2] - [lindex $cellInfo 4]]
         lappend cellInfo [compute_fanout_cost $cell $slackThreshold]
@@ -164,9 +153,6 @@ proc extractCellsInfo {slackThreshold} {
 
 proc compute_score {cell maxFanoutEndpointCost} {
 
-    set powerWeight [expr 100.0 / 100]
-    set cellsWeight [expr 100.0 / 100]
-
     set powerDiff [lindex $cell 5]
     set slackDiff [lindex $cell 6]
     set endpointCost [lindex [lindex $cell 7] 0]
@@ -174,15 +160,14 @@ proc compute_score {cell maxFanoutEndpointCost} {
     set endpointCostDiff 0.0
     set bonus 0.0
 
-    # Score function
+    # Bonus points for FOEC not respected
     if {$endpointCost >= $maxFanoutEndpointCost} {
         set endpointCostDiff [expr $endpointCost - $maxFanoutEndpointCost]
         set bonus [expr 0.0 + [expr $endpointCostDiff / $totalCells]]
     }
 
-    set numerator [expr 0.0 + [expr $powerWeight * $powerDiff]]
-    set denominator [expr 0.0 + [expr $cellsWeight * $slackDiff]]
-    set score [expr 0.0 + [expr $numerator / $denominator] + $bonus]
+    # Score function
+    set score [expr 0.0 + [expr $powerDiff / $slackDiff] + $bonus]
 
     return $score
 }
@@ -206,8 +191,7 @@ proc rankCells {cells maxFanoutEndpointCost} {
 
 proc dualVth {slackThreshold maxFanoutEndpointCost} {
 
-    set loopCount 0
-    set maxPerc 0
+    # Compute the 5% of the total amount of the design cells
     set maxCounter [expr 0.0 + [expr 0.05 * [sizeof_collection [get_cells]]]]
 
     # Extract cells informations and convert all cells to HVT at the end of the routine
